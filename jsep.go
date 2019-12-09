@@ -162,3 +162,7 @@ func (d *MediaDescription) WithCandidate(value string) *MediaDescription {
 func (d *MediaDescription) WithICECandidate(c ICECandidate) *MediaDescription {
 	return d.WithValueAttribute("candidate", c.Marshal())
 }
+
+func (d *MediaDescription) WithExtmap(value string) *MediaDescription {
+	return d.WithValueAttribute("extmap", value)
+}
