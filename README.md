@@ -10,7 +10,7 @@
   <a href="https://pion.ly/slack"><img src="https://img.shields.io/badge/join-us%20on%20slack-gray.svg?longCache=true&logo=slack&colorB=brightgreen" alt="Slack Widget"></a>
   <br>
   <a href="https://travis-ci.org/pion/sdp"><img src="https://travis-ci.org/pion/sdp.svg?branch=master" alt="Build Status"></a>
-  <a href="https://godoc.org/github.com/mudutv/sdp"><img src="https://godoc.org/github.com/mudutv/sdp?status.svg" alt="GoDoc"></a>
+  <a href="https://pkg.go.dev/github.com/pion/sdp/v2"><img src="https://godoc.org/github.com/pion/sdp?status.svg" alt="GoDoc"></a>
   <a href="https://codecov.io/gh/pion/sdp"><img src="https://codecov.io/gh/pion/sdp/branch/master/graph/badge.svg" alt="Coverage Status"></a>
   <a href="https://goreportcard.com/report/github.com/mudutv/sdp"><img src="https://goreportcard.com/badge/github.com/mudutv/sdp" alt="Go Report Card"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
@@ -42,6 +42,13 @@ Check out the **[contributing wiki](https://github.com/mudutv/webrtc/wiki/Contri
 * [Max Hawkins](https://github.com/maxhawkins)
 * [mchlrhw](https://github.com/mchlrhw)
 * [Hugo Arregui](https://github.com/hugoArregui)
+* [Guilherme Souza](https://github.com/gqgs)
+* [adwpc](https://github.com/adwpc) - *extmap add transport-cc*
+* [Atsushi Watanabe](https://github.com/at-wat)
+* [Luke S](https://github.com/encounter)
+* [Jerko Steiner](https://github.com/jeremija)
+* [Roman Romanenko](https://github.com/r-novel)
+* [Jason Brady](https://github.com/jbrady42)
 
 ### License
 MIT License - see [LICENSE](LICENSE) for full text

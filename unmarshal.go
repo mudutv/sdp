@@ -55,7 +55,11 @@ import (
 // In order to generate the following state table and draw subsequent
 // deterministic finite-state automota ("DFA") the following regex was used to
 // derive the DFA:
-// 		vosi?u?e?p?c?b*(tr*)+z?k?a*(mi?c?b*k?a*)*
+//    vosi?u?e?p?c?b*(tr*)+z?k?a*(mi?c?b*k?a*)*
+// possible place and state to exit:
+//                    **   * * *  ** * * * *
+//                    99   1 1 1  11 1 1 1 1
+//                         3 1 1  26 5 5 4 4
 //
 // Please pay close attention to the `k`, and `a` parsing states. In the table
 // below in order to distinguish between the states belonging to the media
@@ -82,9 +86,13 @@ import (
 // |   s16  |    |    14 |    |     |    |  15 |   |    | 12 |   |   |     |   |   |    |   |    |
 // +--------+----+-------+----+-----+----+-----+---+----+----+---+---+-----+---+---+----+---+----+
 func (s *SessionDescription) Unmarshal(value []byte) error {
+	bufsz := 4096
+	if len(value) < bufsz {
+		bufsz = len(value)
+	}
 	l := &lexer{
 		desc:  s,
-		input: bufio.NewReader(bytes.NewReader(value)),
+		input: bufio.NewReaderSize(bytes.NewReader(value), bufsz),
 	}
 	for state := s1; state != nil; {
 		var err error
@@ -94,7 +102,6 @@ func (s *SessionDescription) Unmarshal(value []byte) error {
 		}
 	}
 	return nil
-
 }
 
 func s1(l *lexer) (stateFn, error) {
@@ -368,6 +375,18 @@ func s14(l *lexer) (stateFn, error) {
 	switch key {
 	case "a=":
 		return unmarshalMediaAttribute, nil
+	case "k=":
+		// Non-spec ordering
+		return unmarshalMediaEncryptionKey, nil
+	case "b=":
+		// Non-spec ordering
+		return unmarshalMediaBandwidth, nil
+	case "c=":
+		// Non-spec ordering
+		return unmarshalMediaConnectionInformation, nil
+	case "i=":
+		// Non-spec ordering
+		return unmarshalMediaTitle, nil
 	case "m=":
 		return unmarshalMediaDescription, nil
 	}
@@ -391,6 +410,11 @@ func s15(l *lexer) (stateFn, error) {
 		return unmarshalMediaEncryptionKey, nil
 	case "b=":
 		return unmarshalMediaBandwidth, nil
+	case "c=":
+		return unmarshalMediaConnectionInformation, nil
+	case "i=":
+		// Non-spec ordering
+		return unmarshalMediaTitle, nil
 	case "m=":
 		return unmarshalMediaDescription, nil
 	}
@@ -416,6 +440,9 @@ func s16(l *lexer) (stateFn, error) {
 		return unmarshalMediaConnectionInformation, nil
 	case "b=":
 		return unmarshalMediaBandwidth, nil
+	case "i=":
+		// Non-spec ordering
+		return unmarshalMediaTitle, nil
 	case "m=":
 		return unmarshalMediaDescription, nil
 	}
@@ -431,7 +458,7 @@ func unmarshalProtocolVersion(l *lexer) (stateFn, error) {
 
 	version, err := strconv.ParseInt(value, 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("sdp: invalid numeric value `%v`", version)
+		return nil, fmt.Errorf("sdp: invalid numeric value `%v`", value)
 	}
 
 	// As off the latest draft of the rfc this value is required to be 0.
@@ -578,9 +605,9 @@ func unmarshalConnectionInformation(value string) (*ConnectionInformation, error
 		return nil, fmt.Errorf("sdp: invalid value `%v`", fields[1])
 	}
 
-	var connAddr *Address
+	connAddr := new(Address)
 	if len(fields) > 2 {
-		connAddr = &Address{Address: fields[2]}
+		connAddr.Address = fields[2]
 	}
 
 	return &ConnectionInformation{

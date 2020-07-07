@@ -2,6 +2,7 @@ package sdp
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -12,12 +13,18 @@ const (
 	AttrKeyGroup           = "group"
 	AttrKeySSRC            = "ssrc"
 	AttrKeySSRCGroup       = "ssrc-group"
+	AttrKeyMsid            = "msid"
 	AttrKeyMsidSemantic    = "msid-semantic"
 	AttrKeyConnectionSetup = "setup"
 	AttrKeyMID             = "mid"
 	AttrKeyICELite         = "ice-lite"
 	AttrKeyRTCPMux         = "rtcp-mux"
 	AttrKeyRTCPRsize       = "rtcp-rsize"
+	AttrKeyInactive        = "inactive"
+	AttrKeyRecvOnly        = "recvonly"
+	AttrKeySendOnly        = "sendonly"
+	AttrKeySendRecv        = "sendrecv"
+	AttrKeyExtMap          = "extmap"
 )
 
 // Constants for semantic tokens used in JSEP
@@ -27,6 +34,16 @@ const (
 	SemanticTokenForwardErrorCorrection = "FEC"
 	SemanticTokenWebRTCMediaStreams     = "WMS"
 )
+
+// Constants for extmap key
+const (
+	ExtMapValueTransportCC = 3
+)
+
+// extMapURI is a map
+var extMapURI = map[int]string{
+	ExtMapValueTransportCC: "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01",
+}
 
 // API to match draft-ietf-rtcweb-jsep
 // Move to webrtc or its own package?
@@ -122,6 +139,11 @@ func (d *MediaDescription) WithValueAttribute(key, value string) *MediaDescripti
 	return d
 }
 
+// WithFingerprint adds a fingerprint to the media description
+func (d *MediaDescription) WithFingerprint(algorithm, value string) *MediaDescription {
+	return d.WithValueAttribute("fingerprint", algorithm+" "+value)
+}
+
 // WithICECredentials adds ICE credentials to the media description
 func (d *MediaDescription) WithICECredentials(username, password string) *MediaDescription {
 	return d.
@@ -161,6 +183,21 @@ func (d *MediaDescription) WithCandidate(value string) *MediaDescription {
 // WithICECandidate adds an ICE candidate to the media description
 func (d *MediaDescription) WithICECandidate(c ICECandidate) *MediaDescription {
 	return d.WithValueAttribute("candidate", c.Marshal())
+}
+
+// WithExtMap adds an extmap to the media description
+func (d *MediaDescription) WithExtMap(e ExtMap) *MediaDescription {
+	return d.WithPropertyAttribute(e.Marshal())
+}
+
+// WithTransportCCExtMap adds an extmap to the media description
+func (d *MediaDescription) WithTransportCCExtMap() *MediaDescription {
+	uri, _ := url.Parse(extMapURI[ExtMapValueTransportCC])
+	e := ExtMap{
+		Value: ExtMapValueTransportCC,
+		URI:   uri,
+	}
+	return d.WithExtMap(e)
 }
 
 func (d *MediaDescription) WithExtmap(value string) *MediaDescription {

@@ -7,6 +7,19 @@ import (
 	"strings"
 )
 
+// Default ext values
+const (
+	DefExtMapValueABSSendTime     = 1
+	DefExtMapValueTransportCC     = 2
+	DefExtMapValueSDESMid         = 3
+	DefExtMapValueSDESRTPStreamID = 4
+
+	ABSSendTimeURI     = "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time"
+	TransportCCURI     = "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01"
+	SDESMidURI         = "urn:ietf:params:rtp-hdrext:sdes:mid"
+	SDESRTPStreamIDURI = "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id"
+)
+
 //ExtMap represents the activation of a single RTP header extension
 type ExtMap struct {
 	Value     int
@@ -67,7 +80,7 @@ func (e *ExtMap) Unmarshal(raw string) error {
 
 //Marshal creates a string from an ExtMap
 func (e *ExtMap) Marshal() string {
-	return attributeKey + e.Name() + ":" + e.string() + endline
+	return e.Name() + ":" + e.string()
 }
 
 func (e *ExtMap) string() string {

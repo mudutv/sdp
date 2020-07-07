@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	endline      = "\r\n"
 	attributeKey = "a="
 )
 
@@ -62,6 +61,7 @@ type Codec struct {
 	ClockRate          uint32
 	EncodingParameters string
 	Fmtp               string
+	RTCPFeedback       []string
 }
 
 const (
@@ -69,7 +69,7 @@ const (
 )
 
 func (c Codec) String() string {
-	return fmt.Sprintf("%d %s/%d/%s (%s)", c.PayloadType, c.Name, c.ClockRate, c.EncodingParameters, c.Fmtp)
+	return fmt.Sprintf("%d %s/%d/%s (%s) [%s]", c.PayloadType, c.Name, c.ClockRate, c.EncodingParameters, c.Fmtp, strings.Join(c.RTCPFeedback, ", "))
 }
 
 func parseRtpmap(rtpmap string) (Codec, error) {
@@ -139,6 +139,32 @@ func parseFmtp(fmtp string) (Codec, error) {
 	return codec, nil
 }
 
+func parseRtcpFb(rtcpFb string) (Codec, error) {
+	var codec Codec
+	parsingFailed := errors.New("could not extract codec from rtcp-fb")
+
+	// a=ftcp-fb:<payload type> <RTCP feedback type> [<RTCP feedback parameter>]
+	split := strings.SplitN(rtcpFb, " ", 2)
+	if len(split) != 2 {
+		return codec, parsingFailed
+	}
+
+	ptSplit := strings.Split(split[0], ":")
+	if len(ptSplit) != 2 {
+		return codec, parsingFailed
+	}
+
+	ptInt, err := strconv.Atoi(ptSplit[1])
+	if err != nil {
+		return codec, parsingFailed
+	}
+
+	codec.PayloadType = uint8(ptInt)
+	codec.RTCPFeedback = append(codec.RTCPFeedback, split[1])
+
+	return codec, nil
+}
+
 func mergeCodecs(codec Codec, codecs map[uint8]Codec) {
 	savedCodec := codecs[codec.PayloadType]
 
@@ -157,6 +183,7 @@ func mergeCodecs(codec Codec, codecs map[uint8]Codec) {
 	if savedCodec.Fmtp == "" {
 		savedCodec.Fmtp = codec.Fmtp
 	}
+	savedCodec.RTCPFeedback = append(savedCodec.RTCPFeedback, codec.RTCPFeedback...)
 
 	codecs[savedCodec.PayloadType] = savedCodec
 }
@@ -174,6 +201,11 @@ func (s *SessionDescription) buildCodecMap() map[uint8]Codec {
 				}
 			} else if strings.HasPrefix(attr, "fmtp:") {
 				codec, err := parseFmtp(attr)
+				if err == nil {
+					mergeCodecs(codec, codecs)
+				}
+			} else if strings.HasPrefix(attr, "rtcp-fb:") {
+				codec, err := parseRtcpFb(attr)
 				if err == nil {
 					mergeCodecs(codec, codecs)
 				}
@@ -207,7 +239,7 @@ func equivalentFmtp(want, got string) bool {
 }
 
 func codecsMatch(wanted, got Codec) bool {
-	if wanted.Name != "" && wanted.Name != got.Name {
+	if wanted.Name != "" && !strings.EqualFold(wanted.Name, got.Name) {
 		return false
 	}
 	if wanted.ClockRate != 0 && wanted.ClockRate != got.ClockRate {
@@ -257,34 +289,41 @@ type lexer struct {
 type stateFn func(*lexer) (stateFn, error)
 
 func readType(input *bufio.Reader) (string, error) {
-	key, err := input.ReadString('=')
-	if err != nil {
-		return key, err
-	}
+	for {
+		b, err := input.ReadByte()
+		if err != nil {
+			return "", err
+		}
+		if b == '\n' || b == '\r' {
+			continue
+		}
+		if err = input.UnreadByte(); err != nil {
+			return "", err
+		}
 
-	if len(key) != 2 {
-		return key, fmt.Errorf("SyntaxError: %v", key)
-	}
+		key, err := input.ReadString('=')
+		if err != nil {
+			return key, err
+		}
 
-	return key, nil
+		switch len(key) {
+		case 2:
+			return key, nil
+		default:
+			return key, fmt.Errorf("SyntaxError: %v", strconv.Quote(key))
+		}
+	}
 }
 
 func readValue(input *bufio.Reader) (string, error) {
-	line, err := input.ReadString('\n')
+	lineBytes, _, err := input.ReadLine()
+	line := string(lineBytes)
 	if err != nil && err != io.EOF {
 		return line, err
 	}
 
 	if len(line) == 0 {
 		return line, io.EOF
-	}
-
-	if line[len(line)-1] == '\n' {
-		drop := 1
-		if len(line) > 1 && line[len(line)-2] == '\r' {
-			drop = 2
-		}
-		line = line[:len(line)-drop]
 	}
 
 	return line, nil
@@ -297,11 +336,4 @@ func indexOf(element string, data []string) int {
 		}
 	}
 	return -1
-}
-
-func keyValueBuild(key string, value *string) string {
-	if value != nil {
-		return key + *value + "\r\n"
-	}
-	return ""
 }
